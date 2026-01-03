@@ -4,6 +4,8 @@ import * as cheerio from "cheerio";
 export default async function handler(req, res) {
   const { id, url } = req.query;
 
+  console.log("🔍 API /placa chamada com id:", id); // LOG ADICIONADO
+
   if (!id) {
     return res.status(400).json({ erro: "Parâmetro 'id' (placa) é obrigatório" });
   }
@@ -25,7 +27,7 @@ export default async function handler(req, res) {
     const response = await fetch(proxyUrl);
     const html = await response.text();
 
-    console.log("HTML recebido:", html.substring(0, 500));
+    console.log("HTML recebido:", html.substring(0, 500)); // LOG EXISTENTE
 
     const $ = cheerio.load(html);
     const bodyText = $("body").text().replace(/\s+/g, " ").trim();
