@@ -1,16 +1,21 @@
 export default async function handler(req, res) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  if (req.method === "OPTIONS") {
+    res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    return res.status(200).end();
+  }
+
   const { id } = req.query;
   if (!id) return res.status(400).json({ erro: "Placa obrigatória" });
 
   const placa = String(id).trim().toUpperCase();
 
-  // Sites de consulta
   const sites = [
     `https://puxaplaca.com.br/placa/${placa}`,
     `https://www.keplaca.com/placa?placa-fipe=${placa}`
   ];
 
-  // Serviços de scraping
   const services = [
     {
       name: "ZenRows",
@@ -27,16 +32,17 @@ export default async function handler(req, res) {
   try {
     let lastError = null;
 
-    // Tenta cada site
     for (const site of sites) {
-      // Tenta cada serviço
       for (const service of services) {
+        if (!service.key) {
+          console.warn(`Chave ausente para ${service.name}`);
+          continue;
+        }
         try {
           const response = await fetch(service.url(site));
           if (!response.ok) throw new Error(`${service.name} falhou`);
           const html = await response.text();
 
-          // Se não for bloqueio do Cloudflare, retorna
           if (!html.includes("Attention Required")) {
             return res.status(200).json({ placa, site, service: service.name, html });
           }
@@ -47,7 +53,6 @@ export default async function handler(req, res) {
       }
     }
 
-    // Se nenhum funcionou
     return res.status(500).json({ erro: "Nenhum serviço conseguiu consultar", detalhe: lastError?.message });
   } catch (err) {
     return res.status(500).json({ erro: "Falha geral", detalhe: err.message });

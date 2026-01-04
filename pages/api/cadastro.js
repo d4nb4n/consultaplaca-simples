@@ -1,17 +1,16 @@
 export default async function handler(req, res) {
-	 // 🔍 Log da variável de ambiente para debug
-  console.log("Método recebido:", req.method);
-  console.log("Authorization recebido:", req.headers.authorization);
-  console.log("API_SECRET carregado:", process.env.API_SECRET);
+  // 🔧 Configuração de CORS para permitir chamadas externas (ex: AI Studio)
+  res.setHeader("Access-Control-Allow-Origin", "*");
+
+  if (req.method === "OPTIONS") {
+    res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    return res.status(200).end();
+  }
 
   if (req.method !== "POST") {
     return res.status(405).json({ erro: "Método não permitido" });
   }
-  // 🔒 Verificação de token secreto
- // const authHeader = req.headers.authorization;
- // if (!authHeader || authHeader !== `Bearer ${process.env.API_SECRET}`) {
-  //  return res.status(401).json({ erro: "Não autorizado" });
-  //}
 
   // 📥 Dados recebidos do formulário
   let { nome, telefone, email, cep, placa, blindado, importado, utilizacao } = req.body;
