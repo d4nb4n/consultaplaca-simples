@@ -3,6 +3,9 @@ export default async function handler(req, res) {
     return res.status(405).json({ erro: "Método não permitido" });
   }
 
+  // 🔍 Log da variável de ambiente para debug
+  console.log("API_SECRET carregado:", process.env.API_SECRET);
+
   // 🔒 Verificação de token secreto
   const authHeader = req.headers.authorization;
   if (!authHeader || authHeader !== `Bearer ${process.env.API_SECRET}`) {
