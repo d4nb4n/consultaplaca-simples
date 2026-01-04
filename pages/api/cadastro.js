@@ -1,5 +1,4 @@
 export default async function handler(req, res) {
-  // 🔧 Configuração de CORS para permitir chamadas externas (ex: AI Studio)
   res.setHeader("Access-Control-Allow-Origin", "*");
 
   if (req.method === "OPTIONS") {
@@ -15,29 +14,22 @@ export default async function handler(req, res) {
   // 📥 Dados recebidos do formulário
   let { nome, telefone, email, cep, placa, blindado, importado, utilizacao } = req.body;
 
-  // Normalização simples
-  telefone = telefone?.trim();
-  email = email?.toLowerCase().trim();
-  placa = placa?.toUpperCase().trim();
-
-  // ✅ Validação dos campos obrigatórios
-  if (!nome || !telefone || !email || !cep || !placa || !blindado || !importado || !utilizacao) {
-    return res.status(400).json({ erro: "Campos obrigatórios faltando" });
-  }
+  console.log("Dados recebidos:", { nome, telefone, email, cep, placa, blindado, importado, utilizacao });
 
   try {
-    // 🔎 Consulta da placa internamente
     const consulta = await fetch(
       `https://consultaplaca-simples.vercel.app/api/placa?id=${placa}`
     );
+
+    console.log("Consulta status:", consulta.status);
 
     if (!consulta.ok) {
       return res.status(502).json({ erro: "Falha ao consultar placa" });
     }
 
     const dadosPlaca = await consulta.json();
+    console.log("Dados da placa:", dadosPlaca);
 
-    // 📦 Objeto final
     const leadCompleto = {
       nome,
       telefone,
@@ -50,12 +42,11 @@ export default async function handler(req, res) {
       veiculo: dadosPlaca
     };
 
-    // (Planejado) salvar leadCompleto no banco
-    // (Planejado) enviar mensagem para WhatsApp do consultor
+    console.log("Lead completo:", leadCompleto);
 
-    // ✅ Retorno para o frontend
     return res.status(200).json({ sucesso: true, lead: leadCompleto });
   } catch (err) {
+    console.error("Erro no cadastro:", err.message);
     return res.status(500).json({ erro: "Falha no cadastro", detalhe: err.message });
   }
 }
