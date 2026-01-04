@@ -7,9 +7,13 @@ export default async function handler(req, res) {
   }
 
   const { id } = req.query;
-  if (!id) return res.status(400).json({ erro: "Placa obrigatória" });
+  if (!id) {
+    console.log("Placa não informada");
+    return res.status(400).json({ erro: "Placa obrigatória" });
+  }
 
   const placa = String(id).trim().toUpperCase();
+  console.log("Consulta recebida para placa:", placa);
 
   const sites = [
     `https://puxaplaca.com.br/placa/${placa}`,
@@ -39,12 +43,19 @@ export default async function handler(req, res) {
           continue;
         }
         try {
+          console.log(`Tentando consulta: site=${site}, serviço=${service.name}`);
           const response = await fetch(service.url(site));
+          console.log(`Status da resposta (${service.name}):`, response.status);
+
           if (!response.ok) throw new Error(`${service.name} falhou`);
           const html = await response.text();
 
+          // 🔎 Logar apenas um preview do HTML
+          const preview = html.slice(0, 200).replace(/\n/g, " ");
+          console.log(`Preview do HTML (${service.name}):`, preview);
+
           if (!html.includes("Attention Required")) {
-            return res.status(200).json({ placa, site, service: service.name, html });
+            return res.status(200).json({ placa, site, service: service.name, htmlPreview: preview });
           }
         } catch (err) {
           lastError = err;
@@ -55,6 +66,7 @@ export default async function handler(req, res) {
 
     return res.status(500).json({ erro: "Nenhum serviço conseguiu consultar", detalhe: lastError?.message });
   } catch (err) {
+    console.error("Falha geral:", err.message);
     return res.status(500).json({ erro: "Falha geral", detalhe: err.message });
   }
 }

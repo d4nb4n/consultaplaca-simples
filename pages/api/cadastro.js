@@ -28,7 +28,10 @@ export default async function handler(req, res) {
     }
 
     const dadosPlaca = await consulta.json();
-    console.log("Dados da placa:", dadosPlaca);
+
+    // 🔎 Logar apenas um preview resumido da resposta
+    const preview = JSON.stringify(dadosPlaca).slice(0, 200);
+    console.log("Preview dos dados da placa:", preview);
 
     const leadCompleto = {
       nome,
