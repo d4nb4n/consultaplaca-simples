@@ -1,11 +1,12 @@
 export default async function handler(req, res) {
+	 // 🔍 Log da variável de ambiente para debug
+  console.log("Método recebido:", req.method);
+  console.log("Authorization recebido:", req.headers.authorization);
+  console.log("API_SECRET carregado:", process.env.API_SECRET);
+
   if (req.method !== "POST") {
     return res.status(405).json({ erro: "Método não permitido" });
   }
-
-  // 🔍 Log da variável de ambiente para debug
-  console.log("API_SECRET carregado:", process.env.API_SECRET);
-
   // 🔒 Verificação de token secreto
   const authHeader = req.headers.authorization;
   if (!authHeader || authHeader !== `Bearer ${process.env.API_SECRET}`) {
