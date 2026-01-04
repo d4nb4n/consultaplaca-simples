@@ -8,10 +8,10 @@ export default async function handler(req, res) {
     return res.status(405).json({ erro: "Método não permitido" });
   }
   // 🔒 Verificação de token secreto
-  const authHeader = req.headers.authorization;
-  if (!authHeader || authHeader !== `Bearer ${process.env.API_SECRET}`) {
-    return res.status(401).json({ erro: "Não autorizado" });
-  }
+ // const authHeader = req.headers.authorization;
+ // if (!authHeader || authHeader !== `Bearer ${process.env.API_SECRET}`) {
+  //  return res.status(401).json({ erro: "Não autorizado" });
+  //}
 
   // 📥 Dados recebidos do formulário
   let { nome, telefone, email, cep, placa, blindado, importado, utilizacao } = req.body;
