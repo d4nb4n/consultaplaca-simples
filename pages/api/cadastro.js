@@ -14,14 +14,11 @@ export default async function handler(req, res) {
   // 📥 Dados recebidos do formulário
   let { nome, telefone, email, cep, placa, blindado, importado, utilizacao } = req.body;
 
-  console.log("Dados recebidos:", { nome, telefone, email, cep, placa, blindado, importado, utilizacao });
-
   try {
+    // Consulta a API de placa que acabamos de atualizar
     const consulta = await fetch(
       `https://consultaplaca-simples.vercel.app/api/placa?id=${placa}`
     );
-
-    console.log("Consulta status:", consulta.status);
 
     if (!consulta.ok) {
       return res.status(502).json({ erro: "Falha ao consultar placa" });
@@ -29,27 +26,30 @@ export default async function handler(req, res) {
 
     const dadosPlaca = await consulta.json();
 
-    // 🔎 Logar apenas um preview resumido da resposta
-    const preview = JSON.stringify(dadosPlaca).slice(0, 200);
-    console.log("Preview dos dados da placa:", preview);
-
+    // 🏗️ Monta o Lead organizando os dados do veículo
     const leadCompleto = {
       nome,
       telefone,
       email,
       cep,
-      placa,
+      placa: placa.toUpperCase(),
       blindado,
       importado,
       utilizacao,
-      veiculo: dadosPlaca
+      // Agora pegamos os dados específicos que o novo placa.js retorna
+      veiculo: {
+        tipo: dadosPlaca.tipo || "Carro", // Moto ou Carro
+        marca: dadosPlaca.marca || "n/a",
+        modelo: dadosPlaca.modelo || "n/a",
+        ano: dadosPlaca.ano || "n/a",
+        cor: dadosPlaca.cor || "n/a"
+      },
+      status: "Novo",
+      createdAt: new Date().toISOString()
     };
-
-    console.log("Lead completo:", leadCompleto);
 
     return res.status(200).json({ sucesso: true, lead: leadCompleto });
   } catch (err) {
-    console.error("Erro no cadastro:", err.message);
     return res.status(500).json({ erro: "Falha no cadastro", detalhe: err.message });
   }
 }

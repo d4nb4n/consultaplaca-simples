@@ -1,3 +1,5 @@
+import cheerio from "cheerio";
+
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   if (req.method === "OPTIONS") {
@@ -8,12 +10,10 @@ export default async function handler(req, res) {
 
   const { id } = req.query;
   if (!id) {
-    console.log("Placa não informada");
     return res.status(400).json({ erro: "Placa obrigatória" });
   }
 
   const placa = String(id).trim().toUpperCase();
-  console.log("Consulta recebida para placa:", placa);
 
   const sites = [
     `https://puxaplaca.com.br/placa/${placa}`,
@@ -38,35 +38,46 @@ export default async function handler(req, res) {
 
     for (const site of sites) {
       for (const service of services) {
-        if (!service.key) {
-          console.warn(`Chave ausente para ${service.name}`);
-          continue;
-        }
-        try {
-          console.log(`Tentando consulta: site=${site}, serviço=${service.name}`);
-          const response = await fetch(service.url(site));
-          console.log(`Status da resposta (${service.name}):`, response.status);
+        if (!service.key) continue;
 
+        try {
+          const response = await fetch(service.url(site));
           if (!response.ok) throw new Error(`${service.name} falhou`);
+          
           const html = await response.text();
 
-          // 🔎 Logar apenas um preview do HTML
-          const preview = html.slice(0, 200).replace(/\n/g, " ");
-          console.log(`Preview do HTML (${service.name}):`, preview);
-
           if (!html.includes("Attention Required")) {
-            return res.status(200).json({ placa, site, service: service.name, htmlPreview: preview });
+            // --- LÓGICA DE EXTRAÇÃO DE DADOS ---
+            const $ = cheerio.load(html);
+            const text = $("body").text().replace(/\s+/g, " ").trim();
+            
+            // Identifica se é Moto ou Carro
+            let tipo = /Moto|Motocicleta/i.test(text) ? "Moto" : "Carro";
+            
+            // Captura Marca, Modelo e Ano
+            let marca = text.match(/Marca:\s*([A-Za-zÀ-ú0-9\- ]+)/i)?.[1] || "Não identificada";
+            let modelo = text.match(/Modelo:\s*([A-Za-zÀ-ú0-9\- ]+)/i)?.[1] || "Não identificado";
+            let ano = text.match(/\b(19|20)\d{2}\b/)?.[0] || "n/a";
+            let cor = ["Prata","Preto","Branco","Vermelho","Azul","Cinza"].find(c => new RegExp(`\\b${c}\\b`, "i").test(text)) || "n/a";
+
+            return res.status(200).json({ 
+              placa, 
+              tipo, 
+              marca, 
+              modelo, 
+              ano, 
+              cor,
+              service: service.name 
+            });
           }
         } catch (err) {
           lastError = err;
-          console.error(`Erro com ${service.name} em ${site}:`, err.message);
         }
       }
     }
 
-    return res.status(500).json({ erro: "Nenhum serviço conseguiu consultar", detalhe: lastError?.message });
+    return res.status(500).json({ erro: "Nenhum serviço disponível", detalhe: lastError?.message });
   } catch (err) {
-    console.error("Falha geral:", err.message);
     return res.status(500).json({ erro: "Falha geral", detalhe: err.message });
   }
 }
