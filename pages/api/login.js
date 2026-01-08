@@ -13,25 +13,35 @@ export default async function handler(req, res) {
   const password = String(req.body.password || '').trim();
 
   try {
+    // TESTE 1: Tentar ler a tabela de LEADS (que sabemos que tem dados)
+    const { data: leads, error: errorLeads } = await supabase.from('leads').select('id').limit(1);
+    console.log("--- TESTE DE CONEXÃO ---");
+    console.log("Conexão com Leads:", errorLeads ? "ERRO: " + errorLeads.message : "OK");
+
+    // TESTE 2: Tentar ler a tabela de USUARIOS
     const { data: user, error } = await supabase
       .from('usuarios')
       .select('*')
       .eq('email', email)
-      .single();
+      .maybeSingle();
 
-    if (error || !user) {
-      return res.status(401).json({ erro: "Usuário não encontrado." });
+    if (error) {
+      console.log("Erro ao ler USUARIOS:", error.message);
+      return res.status(500).json({ erro: "Erro no banco: " + error.message });
+    }
+
+    if (!user) {
+      console.log("Usuário não encontrado para o e-mail:", email);
+      return res.status(401).json({ erro: "Usuário não encontrado no banco." });
     }
 
     if (user.password !== password) {
       return res.status(401).json({ erro: "Senha incorreta." });
     }
 
-    return res.status(200).json({ 
-      sucesso: true, 
-      user: { nome: user.nome, role: user.role, email: user.email } 
-    });
+    return res.status(200).json({ sucesso: true, user });
+
   } catch (err) {
-    return res.status(500).json({ erro: err.message });
+    return res.status(500).json({ erro: "Erro Interno: " + err.message });
   }
 }
