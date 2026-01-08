@@ -1,4 +1,4 @@
-// Versão Final Corrigida - 08/01/2026
+// Versão Blindada - 08/01/2026 - v3
 import cheerio from "cheerio";
 
 export default async function handler(req, res) {
@@ -22,17 +22,17 @@ export default async function handler(req, res) {
     {
       name: "ZenRows",
       key: process.env.ZENROWS_KEY,
-      // js_render=true é essencial para sites com proteção como o keplaca
-      url: (target) => `https://api.zenrows.com/v1/?apikey=${process.env.ZENROWS_KEY}&url=${encodeURIComponent(target)}&js_render=true`
+      // Ativa js_render e premium_proxy para evitar bloqueios detectados no painel
+      url: (target) => `https://api.zenrows.com/v1/?apikey=${process.env.ZENROWS_KEY}&url=${encodeURIComponent(target)}&js_render=true&premium_proxy=true`
     },
     {
       name: "ScrapDo",
       key: process.env.SCRAPDO_KEY,
-      url: (target) => `https://api.scrape.do?token=${process.env.SCRAPDO_KEY}&url=${encodeURIComponent(target)}`
+      url: (target) => `https://api.scrape.do?token=${process.env.SCRAPDO_KEY}&url=${encodeURIComponent(target)}&render=true`
     }
   ];
 
-  let mensagemErroFinal = "Nenhum serviço conseguiu retornar dados válidos.";
+  let mensagemErroFinal = "Nenhum serviço disponível ou chaves expiradas.";
 
   try {
     for (const site of sites) {
@@ -42,30 +42,34 @@ export default async function handler(req, res) {
         try {
           const response = await fetch(service.url(site));
           if (!response.ok) {
-            mensagemErroFinal = `Serviço ${service.name} falhou com status ${response.status}`;
+            mensagemErroFinal = `${service.name} retornou status ${response.status}`;
             continue;
           }
           
           const html = await response.text();
 
-          // Proteção contra HTML vazio ou erro de carregamento
-          if (html && html.length > 300 && !html.includes("Attention Required")) {
+          // SÓ CHAMA O CHEERIO SE O HTML FOR VÁLIDO
+          if (html && typeof html === 'string' && html.length > 500 && !html.includes("Attention Required")) {
             const $ = cheerio.load(html);
-            const text = $("body").text().replace(/\s+/g, " ").trim();
+            const bodyText = $("body").text().replace(/\s+/g, " ").trim();
             
-            let tipo = /Moto|Motocicleta/i.test(text) ? "Moto" : "Carro";
-            let marca = text.match(/Marca:\s*([A-Za-zÀ-ú0-9\- ]+)/i)?.[1] || "";
-            let modelo = text.match(/Modelo:\s*([A-Za-zÀ-ú0-9\- ]+)/i)?.[1] || "";
-            let ano = text.match(/\b(19|20)\d{2}\b/)?.[0] || "n/a";
+            // Extração robusta de dados
+            let tipo = /Moto|Motocicleta/i.test(bodyText) ? "Moto" : "Carro";
+            let marca = bodyText.match(/Marca:\s*([A-Za-zÀ-ú0-9\- ]+)/i)?.[1] || "";
+            let modelo = bodyText.match(/Modelo:\s*([A-Za-zÀ-ú0-9\- ]+)/i)?.[1] || "";
+            let ano = bodyText.match(/\b(19|20)\d{2}\b/)?.[0] || "n/a";
 
             if (marca || modelo) {
               return res.status(200).json({ 
-                placa, tipo, marca, modelo, ano, service: service.name 
+                placa, tipo, marca, modelo, ano, 
+                fonte: service.name 
               });
             }
+          } else {
+            mensagemErroFinal = `${service.name} retornou HTML vazio ou página de bloqueio.`;
           }
         } catch (err) {
-          mensagemErroFinal = `Erro no processamento do ${service.name}: ${err.message}`;
+          mensagemErroFinal = `Erro na rede (${service.name}): ${err.message}`;
         }
       }
     }
