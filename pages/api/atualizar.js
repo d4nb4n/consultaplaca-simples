@@ -4,17 +4,18 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANO
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "DELETE, OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
   if (req.method === "OPTIONS") return res.status(200).end();
+  if (req.method !== "POST") return res.status(405).json({ erro: "Método não permitido" });
 
-  const { id } = req.query;
+  const { id, field, value } = req.body; // Recebe o ID do lead, o campo e o novo valor
 
   try {
     const { error } = await supabase
       .from('leads')
-      .update({ visivel: false }) // Apenas esconde o lead da listagem
+      .update({ [field]: value }) // Atualiza dinamicamente o campo alterado
       .eq('id', id);
 
     if (error) throw error;
