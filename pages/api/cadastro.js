@@ -20,9 +20,11 @@ export default async function handler(req, res) {
 
     try {
       const consulta = await fetch(urlConsulta);
-      if (consulta.ok) dadosPlaca = await consulta.json();
+      if (consulta.ok) {
+        dadosPlaca = await consulta.json();
+      }
     } catch (e) {
-      console.error("Erro na consulta da placa:", e.message);
+      console.error("Erro na chamada da API de placa:", e.message);
     }
 
     const serviceAccountAuth = new JWT({
@@ -35,13 +37,17 @@ export default async function handler(req, res) {
     await doc.loadInfo();
     const sheet = doc.sheetsByIndex[0];
 
+    const marcaModeloTexto = (dadosPlaca.marca && dadosPlaca.modelo) 
+      ? `${dadosPlaca.marca} ${dadosPlaca.modelo}` 
+      : "Pendente/API Offline";
+
     await sheet.addRow({
       'Data/Hora': new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }),
       'Nome': nome || 'Não informado',
       'WhatsApp': telefone || 'Não informado',
       'Placa': placaLimpa,
       'Tipo Veículo': dadosPlaca.tipo || 'Carro',
-      'Marca/Modelo': dadosPlaca.marca ? `${dadosPlaca.marca} ${dadosPlaca.modelo}` : "Pendente/Erro API",
+      'Marca/Modelo': marcaModeloTexto,
       'Ano': dadosPlaca.ano || 'n/a',
       'Status': 'Novo',
       'Origem': 'Landpage Principal'
@@ -49,6 +55,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({ sucesso: true });
   } catch (err) {
+    console.error("Erro fatal no cadastro:", err.message);
     return res.status(500).json({ erro: "Erro no cadastro", detalhe: err.message });
   }
 }

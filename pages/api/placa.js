@@ -21,7 +21,7 @@ export default async function handler(req, res) {
     {
       name: "ZenRows",
       key: process.env.ZENROWS_KEY,
-      url: (target) => `https://api.zenrows.com/v1/?apikey=${process.env.ZENROWS_KEY}&url=${encodeURIComponent(target)}&js_render=true`
+      url: (target) => `https://api.zenrows.com/v1/?apikey=${process.env.ZENROWS_KEY}&url=${encodeURIComponent(target)}&js_render=true&premium_proxy=true`
     },
     {
       name: "ScrapDo",
@@ -30,9 +30,9 @@ export default async function handler(req, res) {
     }
   ];
 
-  try {
-    let lastErrorMessage = "Nenhum serviço disponível. Verifique as chaves no Vercel.";
+  let mensagemErroFinal = "Nenhum serviço respondeu. Verifique as chaves no Vercel.";
 
+  try {
     for (const site of sites) {
       for (const service of services) {
         if (!service.key) continue;
@@ -40,13 +40,13 @@ export default async function handler(req, res) {
         try {
           const response = await fetch(service.url(site));
           if (!response.ok) {
-            lastErrorMessage = `${service.name} falhou (Status ${response.status})`;
+            mensagemErroFinal = `${service.name} retornou status ${response.status}`;
             continue;
           }
           
           const html = await response.text();
 
-          if (html && !html.includes("Attention Required") && html.length > 500) {
+          if (html && html.length > 500 && !html.includes("Attention Required")) {
             const $ = cheerio.load(html);
             const text = $("body").text().replace(/\s+/g, " ").trim();
             
@@ -63,13 +63,13 @@ export default async function handler(req, res) {
             }
           }
         } catch (err) {
-          lastErrorMessage = err.message;
+          mensagemErroFinal = `Erro no ${service.name}: ${err.message}`;
         }
       }
     }
-
-    return res.status(500).json({ erro: "Dados não encontrados", detalhe: lastErrorMessage });
+    return res.status(500).json({ erro: "Dados não encontrados", detalhe: mensagemErroFinal });
   } catch (err) {
-    return res.status(500).json({ erro: "Falha geral", detalhe: err.message });
+    return res.status(500).json({ erro: "Falha crítica", detalhe: err.message });
   }
 }
+// Versao 2.0
