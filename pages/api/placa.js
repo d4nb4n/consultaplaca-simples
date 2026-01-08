@@ -1,3 +1,4 @@
+// Versão Final Corrigida - 08/01/2026
 import cheerio from "cheerio";
 
 export default async function handler(req, res) {
@@ -13,15 +14,16 @@ export default async function handler(req, res) {
 
   const placa = String(id).trim().toUpperCase();
   const sites = [
-    `https://puxaplaca.com.br/placa/${placa}`,
-    `https://www.keplaca.com/placa?placa-fipe=${placa}`
+    `https://www.keplaca.com/placa?placa-fipe=${placa}`,
+    `https://puxaplaca.com.br/placa/${placa}`
   ];
 
   const services = [
     {
       name: "ZenRows",
       key: process.env.ZENROWS_KEY,
-      url: (target) => `https://api.zenrows.com/v1/?apikey=${process.env.ZENROWS_KEY}&url=${encodeURIComponent(target)}&js_render=true&premium_proxy=true`
+      // js_render=true é essencial para sites com proteção como o keplaca
+      url: (target) => `https://api.zenrows.com/v1/?apikey=${process.env.ZENROWS_KEY}&url=${encodeURIComponent(target)}&js_render=true`
     },
     {
       name: "ScrapDo",
@@ -30,7 +32,7 @@ export default async function handler(req, res) {
     }
   ];
 
-  let mensagemErroFinal = "Nenhum serviço respondeu. Verifique as chaves no Vercel.";
+  let mensagemErroFinal = "Nenhum serviço conseguiu retornar dados válidos.";
 
   try {
     for (const site of sites) {
@@ -40,13 +42,14 @@ export default async function handler(req, res) {
         try {
           const response = await fetch(service.url(site));
           if (!response.ok) {
-            mensagemErroFinal = `${service.name} retornou status ${response.status}`;
+            mensagemErroFinal = `Serviço ${service.name} falhou com status ${response.status}`;
             continue;
           }
           
           const html = await response.text();
 
-          if (html && html.length > 500 && !html.includes("Attention Required")) {
+          // Proteção contra HTML vazio ou erro de carregamento
+          if (html && html.length > 300 && !html.includes("Attention Required")) {
             const $ = cheerio.load(html);
             const text = $("body").text().replace(/\s+/g, " ").trim();
             
@@ -54,22 +57,21 @@ export default async function handler(req, res) {
             let marca = text.match(/Marca:\s*([A-Za-zÀ-ú0-9\- ]+)/i)?.[1] || "";
             let modelo = text.match(/Modelo:\s*([A-Za-zÀ-ú0-9\- ]+)/i)?.[1] || "";
             let ano = text.match(/\b(19|20)\d{2}\b/)?.[0] || "n/a";
-            let cor = ["Prata","Preto","Branco","Vermelho","Azul","Cinza"].find(c => new RegExp(`\\b${c}\\b`, "i").test(text)) || "n/a";
 
             if (marca || modelo) {
               return res.status(200).json({ 
-                placa, tipo, marca, modelo, ano, cor, service: service.name 
+                placa, tipo, marca, modelo, ano, service: service.name 
               });
             }
           }
         } catch (err) {
-          mensagemErroFinal = `Erro no ${service.name}: ${err.message}`;
+          mensagemErroFinal = `Erro no processamento do ${service.name}: ${err.message}`;
         }
       }
     }
+
     return res.status(500).json({ erro: "Dados não encontrados", detalhe: mensagemErroFinal });
   } catch (err) {
-    return res.status(500).json({ erro: "Falha crítica", detalhe: err.message });
+    return res.status(500).json({ erro: "Falha geral", detalhe: err.message });
   }
 }
-// Versao 2.0
