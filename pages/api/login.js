@@ -8,24 +8,37 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
   if (req.method === "OPTIONS") return res.status(200).end();
-  if (req.method !== "POST") return res.status(405).json({ erro: "Método não permitido" });
 
   const { email, password } = req.body;
 
   try {
+    // Busca o usuário apenas pelo email primeiro
     const { data: user, error } = await supabase
       .from('usuarios')
       .select('*')
       .eq('email', email)
-      .eq('password', password) // Em produção, usaríamos hash Bcrypt aqui
       .single();
 
-    if (error || !user) return res.status(401).json({ erro: "Credenciais inválidas" });
+    // Log para você ver no painel da Vercel
+    console.log(`Tentativa de login para: ${email}`);
 
+    if (error || !user) {
+      console.log("Usuário não encontrado no banco.");
+      return res.status(401).json({ erro: "Credenciais inválidas" });
+    }
+
+    // Compara a senha (simples para este estágio)
+    if (user.password !== password) {
+      console.log("Senha incorreta.");
+      return res.status(401).json({ erro: "Credenciais inválidas" });
+    }
+
+    console.log("Login bem-sucedido!");
     return res.status(200).json({ 
       sucesso: true, 
       user: { nome: user.nome, role: user.role, email: user.email } 
     });
+    
   } catch (err) {
     return res.status(500).json({ erro: err.message });
   }
