@@ -9,36 +9,34 @@ export default async function handler(req, res) {
 
   if (req.method === "OPTIONS") return res.status(200).end();
 
-  const { email, password } = req.body;
+  // Remove espaços em branco do e-mail para evitar erros de digitação
+  const email = req.body.email ? req.body.email.trim().toLowerCase() : '';
+  const password = req.body.password;
 
   try {
-    // Busca o usuário apenas pelo email primeiro
     const { data: user, error } = await supabase
       .from('usuarios')
       .select('*')
       .eq('email', email)
       .single();
 
-    // Log para você ver no painel da Vercel
-    console.log(`Tentativa de login para: ${email}`);
-
     if (error || !user) {
-      console.log("Usuário não encontrado no banco.");
-      return res.status(401).json({ erro: "Credenciais inválidas" });
+      return res.status(401).json({ erro: "Utilizador não encontrado" });
     }
 
-    // Compara a senha (simples para este estágio)
+    // Compara com a coluna 'password' conforme sua imagem
     if (user.password !== password) {
-      console.log("Senha incorreta.");
-      return res.status(401).json({ erro: "Credenciais inválidas" });
+      return res.status(401).json({ erro: "Senha incorreta" });
     }
 
-    console.log("Login bem-sucedido!");
     return res.status(200).json({ 
       sucesso: true, 
-      user: { nome: user.nome, role: user.role, email: user.email } 
+      user: { 
+        nome: user.name || user.nome, // Aceita 'name' conforme sua imagem
+        role: user.role, 
+        email: user.email 
+      } 
     });
-    
   } catch (err) {
     return res.status(500).json({ erro: err.message });
   }
