@@ -26,14 +26,17 @@ export default async function handler(req, res) {
           utilizacao: body.utilizacao || 'Particular',
           status: 'Novo',
           visivel: true
+          // Removido o campo 'id' para deixar o banco gerar automaticamente como int8
         }
       ]);
 
-    if (error) throw error;
+    if (error) {
+      console.error("Erro do Supabase:", error.message); // Verifique os logs da Vercel para ler isso
+      throw error;
+    }
 
     return res.status(200).json({ sucesso: true });
   } catch (err) {
-    console.error("Erro detalhado:", err);
     return res.status(400).json({ erro: err.message });
   }
 }
