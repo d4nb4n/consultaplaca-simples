@@ -9,38 +9,47 @@ export default async function handler(req, res) {
 
   if (req.method === "OPTIONS") return res.status(200).end();
 
-  // Forçar a leitura do body se vier como string ou objeto
-  let dados = req.body;
-  if (typeof dados === 'string') {
-    try { dados = JSON.parse(dados); } catch(e) {}
-  }
-
-  const email = dados.email ? dados.email.trim().toLowerCase() : '';
-  const password = dados.password ? String(dados.password).trim() : '';
-
-  console.log("--- TESTE DE CONEXÃO REFEITO ---");
-  console.log("E-mail recebido no servidor:", email);
-
-  if (!email) {
-    return res.status(400).json({ erro: "O e-mail chegou vazio ao servidor." });
-  }
+  const emailEnviado = req.body.email ? req.body.email.trim().toLowerCase() : '';
+  const senhaEnviada = req.body.password ? String(req.body.password).trim() : '';
 
   try {
+    // Busca usando ilike (ignora maiúsculas/minúsculas no banco)
     const { data: user, error } = await supabase
       .from('usuarios')
       .select('*')
-      .eq('email', email)
+      .ilike('email', emailEnviado)
       .maybeSingle();
 
-    if (!user) {
-      return res.status(401).json({ erro: "Utilizador não cadastrado no Supabase." });
+    console.log("--- DIAGNÓSTICO FINAL ---");
+    console.log("Buscando por:", emailEnviado);
+
+    if (error) {
+      console.log("Erro na query:", error.message);
+      return res.status(500).json({ erro: error.message });
     }
 
-    if (String(user.password).trim() !== password) {
+    if (!user) {
+      console.log("Resultado: E-mail não existe na tabela 'usuarios'");
+      return res.status(401).json({ erro: "E-mail não encontrado." });
+    }
+
+    // Comparação limpando espaços de ambos os lados
+    const senhaBanco = String(user.password).trim();
+    
+    console.log("Senha no banco:", senhaBanco);
+    console.log("Senha digitada:", senhaEnviada);
+
+    if (senhaBanco !== senhaEnviada) {
+      console.log("Resultado: Senha não confere.");
       return res.status(401).json({ erro: "Senha incorreta." });
     }
 
-    return res.status(200).json({ sucesso: true, user });
+    console.log("Resultado: LOGIN AUTORIZADO!");
+    return res.status(200).json({ 
+      sucesso: true, 
+      user: { nome: user.nome || user.name, role: user.role } 
+    });
+
   } catch (err) {
     return res.status(500).json({ erro: err.message });
   }
