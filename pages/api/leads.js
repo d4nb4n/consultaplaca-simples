@@ -2,8 +2,13 @@ import { GoogleSpreadsheet } from 'google-spreadsheet';
 import { JWT } from 'google-auth-library';
 
 export default async function handler(req, res) {
+  // Configuração de CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
-  
+  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+  if (req.method === "OPTIONS") return res.status(200).end();
+
   try {
     const auth = new JWT({
       email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
@@ -18,21 +23,30 @@ export default async function handler(req, res) {
     // Busca todas as linhas da planilha
     const rows = await sheet.getRows();
     
-    // Mapeia os dados para o formato que o seu LeadsTable.tsx espera
-    const leads = rows.map(row => ({
-      id: row.get('Placa') + row.get('Data/Hora'), // ID único simples
-      name: row.get('Nome'),
-      phone: row.get('WhatsApp'),
-      plate: row.get('Placa'),
-      vehicle: row.get('Veículo'),
-      year: row.get('Ano'),
-      status: 'Novo', // Status padrão
-      createdAt: row.get('Data/Hora')
-    }));
+    // Filtra apenas os leads onde a coluna 'Visivel' é 'Sim'
+    // E mapeia para o formato que o front-end espera
+    const leads = rows
+      .filter(row => row.get('Visivel') === 'Sim') 
+      .map(row => ({
+        id: row.get('ID'),
+        name: row.get('Nome'),
+        phone: row.get('WhatsApp'),
+        plate: row.get('Placa'),
+        date: row.get('Data'),      // Coluna Data separada
+        hour: row.get('Hora'),      // Coluna Hora separada
+        vehicle: row.get('Veículo'),
+        year: row.get('Ano'),
+        status: row.get('Status') || 'Novo',
+        blindado: row.get('Blindado'),
+        importado: row.get('Importado'),
+        utilizacao: row.get('Utilização')
+      }));
 
-    return res.status(200).json(leads.reverse()); // Mostra os mais recentes primeiro
+    // Retorna os leads (mais recentes primeiro)
+    return res.status(200).json(leads.reverse());
+    
   } catch (err) {
-    console.error(err);
-    return res.status(500).json({ erro: "Falha ao ler planilha", detalhe: err.message });
+    console.error("Erro ao ler leads:", err.message);
+    return res.status(500).json({ erro: "Falha ao carregar leads", detalhe: err.message });
   }
 }
