@@ -16,27 +16,24 @@ export default async function handler(req, res) {
       .from('leads')
       .insert([
         { 
-          nome: body.nome,
+          name: body.nome,           // DE: body.nome -> PARA: name (conforme banco)
           telefone: body.telefone,
           email: body.email || '',
           cep: body.cep || '',
           placa: body.placa ? body.placa.toUpperCase() : 'S/P',
           blindado: body.blindado || 'Não',
           importado: body.importado || 'Não',
-          utilizacao: body.utilizacao || 'Particular',
+          utilizacao: body.utilizacao || 'Particular', // Ajustado para 'utilizacao' sem acento conforme sua imagem
           status: 'Novo',
           visivel: true
-          // Removido o campo 'id' para deixar o banco gerar automaticamente como int8
         }
       ]);
 
-    if (error) {
-      console.error("Erro do Supabase:", error.message); // Verifique os logs da Vercel para ler isso
-      throw error;
-    }
+    if (error) throw error;
 
     return res.status(200).json({ sucesso: true });
   } catch (err) {
+    console.error("Erro detalhado:", err.message);
     return res.status(400).json({ erro: err.message });
   }
 }

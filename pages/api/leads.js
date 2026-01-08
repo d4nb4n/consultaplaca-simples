@@ -18,19 +18,18 @@ export default async function handler(req, res) {
 
     if (error) throw error;
 
-    // Ajuste de formato para o Frontend (mapeando campos do banco para o que o painel espera)
     const formattedLeads = leads.map(lead => ({
-      id: lead.id.substring(0, 5), // ID curto de 5 caracteres
-      real_id: lead.id, // ID completo para exclusão
-      name: lead.nome,
+      id: String(lead.id).padStart(5, '0'), // Formata o ID int8 para ter 5 dígitos
+      real_id: lead.id,
+      name: lead.name, // Lendo da coluna 'name' em inglês
       phone: lead.telefone,
       plate: lead.placa,
       date: new Date(lead.created_at).toLocaleDateString('pt-BR'),
       hour: new Date(lead.created_at).toLocaleTimeString('pt-BR'),
-      vehicle: lead.veiculo,
-      year: lead.ano,
-      status: lead.status,
-      consultant: "Admin Master" // Nome fixo por enquanto
+      vehicle: lead.veiculo || 'Pendente',
+      year: lead.ano || 'Pendente',
+      status: lead.status || 'Novo',
+      consultant: "Admin Master"
     }));
 
     return res.status(200).json(formattedLeads);
