@@ -1,21 +1,21 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
 
 export default async function handler(req, res) {
-  // CONFIGURAÇÃO DE CORS - Isso resolve o erro da imagem
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-  if (req.method === "OPTIONS") {
-    return res.status(200).end();
+  if (req.method === "OPTIONS") return res.status(200).end();
+
+  // Verifica se as chaves existem no servidor
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return res.status(500).json({ erro: "Configuração do Supabase ausente no Vercel." });
   }
 
-  if (req.method !== "POST") {
-    return res.status(405).json({ erro: "Método não permitido" });
-  }
-
+  const supabase = createClient(supabaseUrl, supabaseAnonKey);
   const { nome, telefone, email, cep, placa, blindado, importado, utilizacao } = req.body;
 
   try {
@@ -27,7 +27,7 @@ export default async function handler(req, res) {
           telefone, 
           email: email || '', 
           cep: cep || '', 
-          placa: placa.toUpperCase(), 
+          placa: placa ? placa.toUpperCase() : 'S/P', 
           blindado: blindado || 'Não', 
           importado: importado || 'Não', 
           utilizacao: utilizacao || 'Particular',
@@ -36,11 +36,13 @@ export default async function handler(req, res) {
         }
       ]);
 
-    if (error) throw error;
+    if (error) {
+      console.error("Erro do Supabase:", error);
+      return res.status(400).json({ erro: error.message });
+    }
 
     return res.status(200).json({ sucesso: true });
   } catch (err) {
-    console.error("Erro no cadastro:", err.message);
-    return res.status(500).json({ erro: err.message });
+    return res.status(500).json({ erro: "Erro interno: " + err.message });
   }
 }
