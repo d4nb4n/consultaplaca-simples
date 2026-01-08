@@ -9,35 +9,41 @@ export default async function handler(req, res) {
 
   if (req.method === "OPTIONS") return res.status(200).end();
 
-  // Remove espaços em branco do e-mail para evitar erros de digitação
+  // Limpeza de dados: remove espaços e coloca e-mail em minúsculo
   const email = req.body.email ? req.body.email.trim().toLowerCase() : '';
-  const password = req.body.password;
+  const password = req.body.password ? String(req.body.password).trim() : '';
 
   try {
+    // Busca o usuário pelo e-mail
     const { data: user, error } = await supabase
       .from('usuarios')
       .select('*')
       .eq('email', email)
-      .single();
+      .maybeSingle(); // Retorna null se não encontrar, em vez de erro 406
 
-    if (error || !user) {
-      return res.status(401).json({ erro: "Utilizador não encontrado" });
+    if (error) throw error;
+
+    if (!user) {
+      return res.status(401).json({ erro: "E-mail não cadastrado." });
     }
 
-    // Compara com a coluna 'password' conforme sua imagem
-    if (user.password !== password) {
-      return res.status(401).json({ erro: "Senha incorreta" });
+    // Comparação exata da senha
+    if (String(user.password).trim() !== password) {
+      return res.status(401).json({ erro: "Senha incorreta." });
     }
 
+    // Login com sucesso
     return res.status(200).json({ 
       sucesso: true, 
       user: { 
-        nome: user.name || user.nome, // Aceita 'name' conforme sua imagem
+        nome: user.nome || user.name, 
         role: user.role, 
         email: user.email 
       } 
     });
+
   } catch (err) {
-    return res.status(500).json({ erro: err.message });
+    console.error("Erro interno no Login:", err.message);
+    return res.status(500).json({ erro: "Erro no servidor: " + err.message });
   }
 }
