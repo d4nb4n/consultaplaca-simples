@@ -9,39 +9,44 @@ export default async function handler(req, res) {
 
   if (req.method === "OPTIONS") return res.status(200).end();
 
-  const email = req.body.email?.trim().toLowerCase();
-  const password = String(req.body.password || '').trim();
+  const emailDigitado = req.body.email?.trim().toLowerCase();
+  const senhaDigitada = String(req.body.password || '').trim();
 
   try {
-    // TESTE 1: Tentar ler a tabela de LEADS (que sabemos que tem dados)
-    const { data: leads, error: errorLeads } = await supabase.from('leads').select('id').limit(1);
-    console.log("--- TESTE DE CONEXÃO ---");
-    console.log("Conexão com Leads:", errorLeads ? "ERRO: " + errorLeads.message : "OK");
+    // AUDITORIA: Lista todos os e-mails na tabela para o log
+    const { data: todos } = await supabase.from('usuarios').select('email');
+    console.log("E-mails existentes no banco:", todos?.map(u => u.email).join(', '));
 
-    // TESTE 2: Tentar ler a tabela de USUARIOS
+    // Busca o usuário
     const { data: user, error } = await supabase
       .from('usuarios')
       .select('*')
-      .eq('email', email)
+      .ilike('email', emailDigitado)
       .maybeSingle();
 
-    if (error) {
-      console.log("Erro ao ler USUARIOS:", error.message);
-      return res.status(500).json({ erro: "Erro no banco: " + error.message });
-    }
+    if (error) throw error;
 
     if (!user) {
-      console.log("Usuário não encontrado para o e-mail:", email);
-      return res.status(401).json({ erro: "Usuário não encontrado no banco." });
+      console.log(`Falha: ${emailDigitado} não existe na lista acima.`);
+      return res.status(401).json({ erro: "Usuário não encontrado." });
     }
 
-    if (user.password !== password) {
+    if (String(user.password).trim() !== senhaDigitada) {
+      console.log("Falha: Senha incorreta.");
       return res.status(401).json({ erro: "Senha incorreta." });
     }
 
-    return res.status(200).json({ sucesso: true, user });
+    // Retorna os dados usando o nome da coluna correto da sua imagem
+    return res.status(200).json({ 
+      sucesso: true, 
+      user: { 
+        nome: user.name || user.nome, 
+        role: user.role, 
+        email: user.email 
+      } 
+    });
 
   } catch (err) {
-    return res.status(500).json({ erro: "Erro Interno: " + err.message });
+    return res.status(500).json({ erro: err.message });
   }
 }
