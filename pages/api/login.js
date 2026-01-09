@@ -19,31 +19,23 @@ export default async function handler(req, res) {
       .eq('email', emailDigitado)
       .maybeSingle();
 
-    console.log("--- TENTATIVA DE LOGIN ---");
-    console.log("Email digitado:", emailDigitado);
-
-    if (error) {
-      console.log("Erro Supabase:", error.message);
-      return res.status(500).json({ erro: error.message });
+    if (error || !user || user.password !== senhaDigitada) {
+      return res.status(401).json({ success: false, message: "Credenciais inválidas" });
     }
 
-    if (!user) {
-      console.log("Resultado: Usuário não encontrado no banco.");
-      return res.status(401).json({ erro: "Usuário não encontrado." });
-    }
-
-    console.log("Senha no banco:", user.password);
-    console.log("Senha digitada:", senhaDigitada);
-
-    if (user.password !== senhaDigitada) {
-      console.log("Resultado: Senha não confere.");
-      return res.status(401).json({ erro: "Senha incorreta." });
-    }
-
-    console.log("Resultado: SUCESSO!");
-    return res.status(200).json({ sucesso: true, user });
+    // Retornamos 'success' e 'sucesso' para garantir que o frontend entenda
+    return res.status(200).json({ 
+      success: true,
+      sucesso: true, 
+      user: { 
+        nome: user.nome, 
+        role: user.role, 
+        email: user.email 
+      },
+      token: "login_efetuado_com_sucesso" // Alguns frontends exigem um token presente
+    });
 
   } catch (err) {
-    return res.status(500).json({ erro: err.message });
+    return res.status(500).json({ success: false, erro: err.message });
   }
 }
