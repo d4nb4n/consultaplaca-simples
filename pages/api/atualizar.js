@@ -11,11 +11,18 @@ export default async function handler(req, res) {
 
   const { id, field, value } = req.body;
 
-  // Mapeamento: O que vem do site -> O que está no Supabase
+  // Mapeamento: O que vem do site -> Nome da coluna no Supabase
   const columnMap = {
     'vehicle': 'veiculo',
     'year': 'ano',
-    'status': 'status'
+    'status': 'status',
+    'tipo_veiculo': 'tipo_veiculo',
+    'taxa_adesao': 'taxa_adesao_valor',
+    'desconto': 'desconto_cliente',
+    'indicacao': 'indicacao_valor',
+    'indicacao_paga': 'indicacao_paga',
+    'indicacao_nome': 'indicacao_nome',
+    'indicacao_pix': 'indicacao_pix'
   };
 
   const targetColumn = columnMap[field] || field;
