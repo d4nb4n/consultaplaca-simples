@@ -9,36 +9,40 @@ export default async function handler(req, res) {
 
   if (req.method === "OPTIONS") return res.status(200).end();
 
-  const email = req.body.email?.trim().toLowerCase();
-  const password = String(req.body.password || '').trim();
+  const emailDigitado = req.body.email?.trim().toLowerCase();
+  const senhaDigitada = String(req.body.password || '').trim();
 
   try {
     const { data: user, error } = await supabase
       .from('usuarios')
       .select('*')
-      .eq('email', email)
+      .eq('email', emailDigitado)
       .maybeSingle();
 
-    if (error) throw error;
+    console.log("--- TENTATIVA DE LOGIN ---");
+    console.log("Email digitado:", emailDigitado);
 
-    if (!user) {
-      return res.status(401).json({ erro: "Usuário não encontrado no banco." });
+    if (error) {
+      console.log("Erro Supabase:", error.message);
+      return res.status(500).json({ erro: error.message });
     }
 
-    // Compara a senha exata do banco
-    if (user.password !== password) {
+    if (!user) {
+      console.log("Resultado: Usuário não encontrado no banco.");
+      return res.status(401).json({ erro: "Usuário não encontrado." });
+    }
+
+    console.log("Senha no banco:", user.password);
+    console.log("Senha digitada:", senhaDigitada);
+
+    if (user.password !== senhaDigitada) {
+      console.log("Resultado: Senha não confere.");
       return res.status(401).json({ erro: "Senha incorreta." });
     }
 
-    // Sucesso - Retorna os dados padronizados
-    return res.status(200).json({ 
-      sucesso: true, 
-      user: { 
-        nome: user.nome, 
-        role: user.role, 
-        email: user.email 
-      } 
-    });
+    console.log("Resultado: SUCESSO!");
+    return res.status(200).json({ sucesso: true, user });
+
   } catch (err) {
     return res.status(500).json({ erro: err.message });
   }
