@@ -9,43 +9,36 @@ export default async function handler(req, res) {
 
   if (req.method === "OPTIONS") return res.status(200).end();
 
-  const emailDigitado = req.body.email?.trim().toLowerCase();
-  const senhaDigitada = String(req.body.password || '').trim();
+  const email = req.body.email?.trim().toLowerCase();
+  const password = String(req.body.password || '').trim();
 
   try {
-    // AUDITORIA: Lista todos os e-mails na tabela para o log
-    const { data: todos } = await supabase.from('usuarios').select('email');
-    console.log("E-mails existentes no banco:", todos?.map(u => u.email).join(', '));
-
-    // Busca o usuário
     const { data: user, error } = await supabase
       .from('usuarios')
       .select('*')
-      .ilike('email', emailDigitado)
+      .eq('email', email)
       .maybeSingle();
 
     if (error) throw error;
 
     if (!user) {
-      console.log(`Falha: ${emailDigitado} não existe na lista acima.`);
-      return res.status(401).json({ erro: "Usuário não encontrado." });
+      return res.status(401).json({ erro: "Usuário não encontrado no banco." });
     }
 
-    if (String(user.password).trim() !== senhaDigitada) {
-      console.log("Falha: Senha incorreta.");
+    // Compara a senha exata do banco
+    if (user.password !== password) {
       return res.status(401).json({ erro: "Senha incorreta." });
     }
 
-    // Retorna os dados usando o nome da coluna correto da sua imagem
+    // Sucesso - Retorna os dados padronizados
     return res.status(200).json({ 
       sucesso: true, 
       user: { 
-        nome: user.name || user.nome, 
+        nome: user.nome, 
         role: user.role, 
         email: user.email 
       } 
     });
-
   } catch (err) {
     return res.status(500).json({ erro: err.message });
   }
