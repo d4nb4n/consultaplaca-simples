@@ -14,22 +14,17 @@ export default async function handler(req, res) {
       .from('leads')
       .select('*')
       .eq('visivel', true)
-      .order('created_at', { ascending: false });
+      .order('id', { ascending: false }); // Ordenação por ID decrescente
 
     if (error) throw error;
 
+    // Enviamos o objeto mais completo e sem renomear chaves críticas
     const formattedLeads = leads.map(lead => ({
-      id: String(lead.id).padStart(5, '0'), // Formata o ID int8 para ter 5 dígitos
-      real_id: lead.id,
-      name: lead.name, // Lendo da coluna 'name' em inglês
-      phone: lead.telefone,
-      plate: lead.placa,
+      ...lead,
+      display_id: String(lead.id).padStart(5, '0'),
       date: new Date(lead.created_at).toLocaleDateString('pt-BR'),
       hour: new Date(lead.created_at).toLocaleTimeString('pt-BR'),
-      vehicle: lead.veiculo || 'Pendente',
-      year: lead.ano || 'Pendente',
-      status: lead.status || 'Novo',
-      consultant: "Admin Master"
+      // Mantemos name, telefone, email, cep, etc., como estão no banco
     }));
 
     return res.status(200).json(formattedLeads);
