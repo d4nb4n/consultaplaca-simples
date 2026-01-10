@@ -11,18 +11,19 @@ export default async function handler(req, res) {
 
   const { id, field, value } = req.body;
 
-  // Mapeamento: O que vem do site -> Nome da coluna no Supabase
+  // Mapeamento completo: Frontend -> Supabase
   const columnMap = {
     'vehicle': 'veiculo',
-    'year': 'ano',
-    'status': 'status',
     'tipo_veiculo': 'tipo_veiculo',
+    'ano_fabricacao': 'ano_fabricacao',
+    'ano_modelo': 'ano_modelo',
     'taxa_adesao': 'taxa_adesao_valor',
     'desconto': 'desconto_cliente',
     'indicacao': 'indicacao_valor',
     'indicacao_paga': 'indicacao_paga',
     'indicacao_nome': 'indicacao_nome',
-    'indicacao_pix': 'indicacao_pix'
+    'indicacao_pix': 'indicacao_pix',
+    'status': 'status'
   };
 
   const targetColumn = columnMap[field] || field;
@@ -36,6 +37,7 @@ export default async function handler(req, res) {
     if (error) throw error;
     return res.status(200).json({ sucesso: true });
   } catch (err) {
+    console.error("Erro na atualização:", err.message);
     return res.status(500).json({ erro: err.message });
   }
 }
