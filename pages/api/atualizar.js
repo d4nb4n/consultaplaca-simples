@@ -13,33 +13,25 @@ export default async function handler(req, res) {
 
   if (!id) return res.status(400).json({ erro: "ID é obrigatório" });
 
-  // Mapeamento completo PRESERVADO do seu arquivo original
   const columnMap = {
     'vehicle': 'veiculo',
-    'tipo_veiculo': 'tipo_veiculo',
     'ano_fabricacao': 'ano_fabricacao',
     'ano_modelo': 'ano_modelo',
-    'cor': 'cor', // Nova coluna adicionada
-    'taxa_adesao': 'taxa_adesao_valor',
-    'desconto': 'desconto_cliente',
-    'indicacao': 'indicacao_valor',
-    'indicacao_paga': 'indicacao_paga',
-    'indicacao_nome': 'indicacao_nome',
-    'indicacao_pix': 'indicacao_pix',
+    'cor': 'cor',
     'status': 'status'
   };
 
   try {
     let updatePayload = {};
 
-    // Lógica para suportar a consulta automática (múltiplos campos de uma vez)
     if (multipleData) {
+      // Se enviarmos vários campos (pelo botão Colar)
       Object.keys(multipleData).forEach(key => {
         const targetCol = columnMap[key] || key;
         updatePayload[targetCol] = multipleData[key];
       });
     } else {
-      // Lógica original para edição campo a campo
+      // Se for edição manual de um campo só
       const targetColumn = columnMap[field] || field;
       updatePayload[targetColumn] = value;
     }
@@ -52,7 +44,6 @@ export default async function handler(req, res) {
     if (error) throw error;
     return res.status(200).json({ sucesso: true });
   } catch (err) {
-    console.error("Erro na atualização:", err.message);
     return res.status(500).json({ erro: err.message });
   }
 }
